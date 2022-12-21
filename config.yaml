@@ -1,0 +1,21 @@
+app:
+  pool: 100
+  port: 80
+log:
+  env: dev
+  level: info
+kafka:
+  version: "2.5.0"
+  timeout: 10s
+  group: "kafka.group"
+  auth: false
+  topic:
+    consumeTopic: 
+      - "consume-topic"
+  brokers:
+    - "localhost:9092"
+    # - "brokers2:9092"
+    # - "brokers3:9092"
+# secrets:
+#   kafkaUsername: "sit_msg_cdi"
+#   kafkaPassword: "IVUWDLIgVauVwJG"
