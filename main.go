@@ -11,12 +11,14 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/panjf2000/ants/v2"
 	"github.com/spf13/viper"
 
 	"kafka-reconsign/consumer"
 	scramkafka "kafka-reconsign/internal/screamkafka"
+	"kafka-reconsign/repositories"
 )
 
 // READ CONFIG
@@ -90,6 +92,17 @@ func main() {
 
 	cancelConsumer()
 	wg.Wait()
+
+	//connectDB
+	db, err := sqlx.Open("mysql", "sa:MyPass@word@tcp(localhost:1433)/repo")
+	if err != nil {
+		panic(err)
+	}
+	orderRepository := repositories.NewOrderRepositoryDB(db)
+	_ = orderRepository
+
+	//test call function
+
 }
 
 func initEcho() *echo.Echo {
