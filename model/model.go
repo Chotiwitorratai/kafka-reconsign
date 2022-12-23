@@ -1,14 +1,21 @@
 package model
 
-type KafkaModel struct {
-	RefId   *string `json:"refId,omitempty"`
-	State   *string `json:"state,omitempty"`
-	Message *string `json:"message,omitempty"`
+import "reflect"
+
+var Topics = []string{
+	reflect.TypeOf(PaymentKNEXT{}).Name(),
+	reflect.TypeOf(InsuranceData{}).Name(),
 }
 
-type Header struct {
-	AppId       string `json:"appId"`
-	AccessToken string `json:"accessToken"`
-	ReferenceId string `json:"referenceId"`
-	ServiceId   string `json:"serviceId"`
+type PaymentKNEXT struct {
+	ID     string
+	Status string
+	Update int
+}
+
+type InsuranceData struct {
+	ID         string
+	IpCallBack string
+	Status     string
+	Update     int
 }

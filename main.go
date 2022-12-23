@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
@@ -19,6 +21,13 @@ import (
 	"kafka-reconsign/consumer"
 	scramkafka "kafka-reconsign/internal/screamkafka"
 	"kafka-reconsign/repositories"
+)
+
+const (
+	dbServer = "server_name"
+	dbName   = "database_name"
+	dbUser   = "user_name"
+	dbPass   = "password"
 )
 
 // READ CONFIG
@@ -35,6 +44,20 @@ func init() {
 
 	runtime.GOMAXPROCS(1)
 	log.Printf("%v : %v", viper.GetString("log.level"), viper.GetString("log.env"))
+}
+
+func InitDatabase() *sqlx.DB {
+	connString := fmt.Sprintf("server=%s;database=%s;user id=%s;password=%s", dbServer, dbName, dbUser, dbPass)
+	db, err := sqlx.Connect("mssql", connString)
+	if err != nil {
+		return nil
+	}
+
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxLifetime(time.Minute * 5)
+
+	return db
 }
 
 func main() {
@@ -55,7 +78,9 @@ func main() {
 	}
 	defer consumerGroupClient.Close()
 
-	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New())
+	db := InitDatabase()
+	orderRepository := repositories.NewOrderRepositoryDB(db)
+	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New(orderRepository))
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
@@ -92,16 +117,6 @@ func main() {
 
 	cancelConsumer()
 	wg.Wait()
-
-	//connectDB
-	db, err := sqlx.Open("mysql", "sa:MyPass@word@tcp(localhost:1433)/repo")
-	if err != nil {
-		panic(err)
-	}
-	orderRepository := repositories.NewOrderRepositoryDB(db)
-	_ = orderRepository
-
-	//test call function
 
 }
 

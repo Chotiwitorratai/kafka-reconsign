@@ -1,0 +1,14 @@
+kafka:
+  servers:
+    - localhost:9092
+  group: accountConsumer
+  topic:
+   consumeTopic:
+      - "PaymentKNEXT"
+      - "InsuranceData"
+
+secrets:
+  kafkaUsername: "my-reconcile"
+  kafkaPassword: "passW123"
+
+notification_interval: 5

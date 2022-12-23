@@ -61,7 +61,7 @@ func (h *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 
 			defer h.wg.Done()
 
-			if err := h.svc.Process(ctx, msg.Headers, string(msg.Value)); err != nil {
+			if err := h.svc.Process(msg.Topic, ctx, msg.Headers, string(msg.Value)); err != nil {
 				log.Println("Process Err: ", err)
 				return
 			}
