@@ -41,14 +41,13 @@ type Alert struct {
 }
 
 type ReconcileRepository interface {
-	GetReconcileByRefID(id string) (reconciles []Reconcile, err error)
+	CheckNullReconcile(id string) (bool, error)
 	SaveReconcile(reconcile Reconcile) error
-	UpdateReconcile()()
+	UpdateReconcile(reconcile Reconcile) error
 
-	GetStatusReconcileFail()
+	GGetReconcileFail()(reconcile []Reconcile, err error)
+	GetAlertFail()(reconcile []Reconcile, err error)
 
-	GetAlertFail()()
-
-	SaveAlert(alert Alert) error
-	UpdateAlertStatus()()
+	SaveAlert(alert []Alert) error
+	UpdateAlertStatus(alert Alert) error
 }
