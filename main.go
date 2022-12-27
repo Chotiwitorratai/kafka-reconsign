@@ -125,7 +125,6 @@ func main() {
 	// 		ProductOwner:                 "KIA",
 	// 		PlanType:                     "TA",
 	// }
-
 	// err = reconcileRepository.SaveReconcile(testData)
 	// if err != nil {
 	// 	panic(err)
@@ -137,6 +136,7 @@ func main() {
 	// 	panic(err)
 	// }
 	// fmt.Println(boo)
+
 	// test func UpdateReconcile
 	// var testData = repositories.Reconcile{
 	// 	Model:                        gorm.Model{},
@@ -172,7 +172,6 @@ func main() {
 	// fmt.Println(recon)
 
 	// test func SaveAlert
-
 	// var testData = []repositories.Alert{
 	// 	{
 	// 		Model:     gorm.Model{},
@@ -196,7 +195,8 @@ func main() {
 	// if err != nil {
 	// 	panic(err)
 	// }
-	//test func repositories
+
+	//test func UpdateAlert
 	// var testData = repositories.Alert{
 	// 		Model:     gorm.Model{},
 	// 		Messages:  "fail",
@@ -210,6 +210,7 @@ func main() {
 	// if err != nil {
 	// 	panic(err)
 	// }
+
 	//test func GetAlertFail
 	// a, err := reconcileRepository.GetAlertFail()
 	// if err != nil {
