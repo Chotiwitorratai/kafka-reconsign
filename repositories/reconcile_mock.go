@@ -2,24 +2,35 @@ package repositories
 
 import "github.com/stretchr/testify/mock"
 
-type orderRepositoryDBMock struct {
+type reconcileRepositoryMock struct {
 	mock.Mock
 }
 
-func NewOrderRepositoryDBMock() *orderRepositoryDBMock {
-	return &orderRepositoryDBMock{}
+func NewReconcileRepositoryMock() *reconcileRepositoryMock {
+	return &reconcileRepositoryMock{}
 }
 
-func (m *orderRepositoryDBMock) GetReconcileByRefID(id string) (reconciles []Reconcile, err error) {
+func (m *reconcileRepositoryMock) GetReconcileByRefID(id string) (reconciles []Reconcile, err error) {
 	args := m.Called(id)
 	return args.Get(0).([]Reconcile), args.Error(1)
 }
-func (m *orderRepositoryDBMock) SaveReconcile(reconcile Reconcile) error {
+
+func (m *reconcileRepositoryMock) SaveReconcile(reconcile Reconcile) error {
 	args := m.Called(reconcile)
 	return args.Error(0)
 }
 
-// func (m *orderRepositoryDBMock) ChangeStatus(string, string) (string, error) {
-// 	args := m.Called()
-// 	return args.Get(0).(string), args.Error(1)
-// }
+func (m *reconcileRepositoryMock) SaveAlert(alert []Alert) error {
+	args := m.Called(alert)
+	return args.Error(0)
+}
+
+func (m *reconcileRepositoryMock) UpdateReconcile(reconcile Reconcile) error {
+	args := m.Called(reconcile)
+	return args.Error(0)
+}
+
+func (m *reconcileRepositoryMock) UpdateAlertStatus(alert Alert) error {
+	args := m.Called(alert)
+	return args.Error(0)
+}
