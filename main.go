@@ -14,9 +14,12 @@ import (
 	"github.com/labstack/echo"
 	"github.com/panjf2000/ants/v2"
 	"github.com/spf13/viper"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 
 	"kafka-reconsign/consumer"
 	scramkafka "kafka-reconsign/internal/screamkafka"
+	"kafka-reconsign/repositories"
 )
 
 // READ CONFIG
@@ -90,6 +93,129 @@ func main() {
 
 	cancelConsumer()
 	wg.Wait()
+
+	//connectDB
+	dsn := "root@tcp(127.0.0.1:3306)/reconcile?parseTime=true"
+	dial := mysql.Open(dsn)
+	db, err := gorm.Open(dial)
+	if err != nil {
+		panic(err)
+	}
+	reconcileRepository := repositories.NewReconcileRepositoryDB(db)
+	_ = reconcileRepository
+	// test func SaveReconcile
+	// var testData = repositories.Reconcile{
+	// 		Model:                        gorm.Model{},
+	// 		TransactionRefID:             "2testref2oo",
+	// 		Status:                       "Success",
+	// 		TransactionCreatedTimestamp:  time.Now().Add(-time.Second * 1),
+	// 		PaymentInfoAmount:            10000,
+	// 		PaymentInfoWebAdditionalInfo: "test",
+	// 		PartnerInfoName:              "KIA",
+	// 		PartnerInfoDeeplinkUrl:       "www.example.com",
+	// 		PaymentPlatform:              "K-NEXT",
+	// 		IdCard:                       "426xxxxxxxxxxxxxxxx",
+	// 		PlanCode:                     "TA30",
+	// 		PlanName:                     "TEST",
+	// 		EffectiveDate:                time.Now(),
+	// 		ExpireDate:                   time.Now().AddDate(1, 0, 0),
+	// 		IssueDate:                    time.Now(),
+	// 		InsuranceStatus:              "Success",
+	// 		TotalSumInsured:              10000,
+	// 		ProductOwner:                 "KIA",
+	// 		PlanType:                     "TA",
+	// }
+
+	// err = reconcileRepository.SaveReconcile(testData)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// test func CheckNullReconcile true = มี  flase = ไม่มี
+	// boo, err := reconcileRepository.CheckNullReconcile("lkjkllk")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(boo)
+	// test func UpdateReconcile
+	// var testData = repositories.Reconcile{
+	// 	Model:                        gorm.Model{},
+	// 	TransactionRefID:             "2testref2oo",
+	// 	Status:                       "Successss",
+	// 	TransactionCreatedTimestamp:  time.Now().Add(-time.Second * 1),
+	// 	PaymentInfoAmount:            10000,
+	// 	PaymentInfoWebAdditionalInfo: "test",
+	// 	PartnerInfoName:              "KIA",
+	// 	PartnerInfoDeeplinkUrl:       "www.example.com",
+	// 	PaymentPlatform:              "K-NEXT",
+	// 	IdCard:                       "426xxxxxxxxxxxxxxxx",
+	// 	PlanCode:                     "TA30",
+	// 	PlanName:                     "TEST",
+	// 	EffectiveDate:                time.Now(),
+	// 	ExpireDate:                   time.Now().AddDate(1, 0, 0),
+	// 	IssueDate:                    time.Now(),
+	// 	InsuranceStatus:              "Success",
+	// 	TotalSumInsured:              10000,
+	// 	ProductOwner:                 "KIA",
+	// 	PlanType:                     "TA",
+	// }
+	// err = reconcileRepository.UpdateReconcile(testData)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// test func GetReconcileFail
+	// recon, err := reconcileRepository.GetReconcileFail()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(recon)
+
+	// test func SaveAlert
+
+	// var testData = []repositories.Alert{
+	// 	{
+	// 		Model:     gorm.Model{},
+	// 		Messages:  "success",
+	// 		Count:     2,
+	// 		Status:    "success",
+	// 		NextAlert: time.Now(),
+	// 		RefId:     "klhjllkj",
+	// 		Missing:   "Next",
+	// 	}, {
+	// 		Model:     gorm.Model{},
+	// 		Messages:  "success",
+	// 		Count:     2,
+	// 		Status:    "success",
+	// 		NextAlert: time.Now(),
+	// 		RefId:     "klhjllkj",
+	// 		Missing:   "Next",
+	// 	},
+	// }
+	// err = reconcileRepository.SaveAlert(testData)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//test func repositories
+	// var testData = repositories.Alert{
+	// 		Model:     gorm.Model{},
+	// 		Messages:  "fail",
+	// 		Count:     2,
+	// 		Status:    "successss",
+	// 		NextAlert: time.Now(),
+	// 		RefId:     "klhjllkj",
+	// 		Missing:   "Next",
+	// 	}
+	// err = reconcileRepository.UpdateAlert(testData)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//test func GetAlertFail
+	// a, err := reconcileRepository.GetAlertFail()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Print(a)
 
 }
 

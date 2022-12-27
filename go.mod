@@ -10,6 +10,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	github.com/xdg/scram v1.0.5
+	gorm.io/driver/mysql v1.4.4
 	gorm.io/gorm v1.24.2
 )
 
@@ -19,6 +20,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -30,7 +32,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/jinzhu/now v1.1.4 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
