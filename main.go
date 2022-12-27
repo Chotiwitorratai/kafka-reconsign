@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"kafka-reconsign/consumer"
 	scramkafka "kafka-reconsign/internal/screamkafka"
@@ -38,6 +40,25 @@ func init() {
 	log.Printf("%v : %v", viper.GetString("log.level"), viper.GetString("log.env"))
 }
 
+func initDatabase() *gorm.DB {
+	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=%v",
+		viper.GetString("db.username"),
+		viper.GetString("db.password"),
+		viper.GetString("db.host"),
+		viper.GetInt("db.port"),
+		viper.GetString("db.database"),
+		viper.GetBool("db.parseTime"))
+
+	dial := mysql.Open(dsn)
+	db, err := gorm.Open(dial, &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
 func main() {
 	ctx, cancelConsumer := context.WithCancel(context.Background())
 	defer cancelConsumer()
@@ -56,7 +77,10 @@ func main() {
 	}
 	defer consumerGroupClient.Close()
 
-	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New())
+	db := initDatabase()
+	reconcileRepository := repositories.NewReconcileRepositoryDB(db)
+
+	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New(reconcileRepository))
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
@@ -94,15 +118,6 @@ func main() {
 	cancelConsumer()
 	wg.Wait()
 
-	//connectDB
-	dsn := "root@tcp(127.0.0.1:3306)/reconcile?parseTime=true"
-	dial := mysql.Open(dsn)
-	db, err := gorm.Open(dial)
-	if err != nil {
-		panic(err)
-	}
-	reconcileRepository := repositories.NewReconcileRepositoryDB(db)
-	_ = reconcileRepository
 	// test func SaveReconcile
 	// var testData = repositories.Reconcile{
 	// 		Model:                        gorm.Model{},
