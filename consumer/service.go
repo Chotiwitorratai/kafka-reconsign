@@ -3,12 +3,13 @@ package consumer
 import (
 	"context"
 	"encoding/json"
-	"kafka-reconsign/model"
-	"kafka-reconsign/repositories"
 	"log"
 	"reflect"
 
 	"github.com/Shopify/sarama"
+
+	"kafka-reconsign/model"
+	"kafka-reconsign/repositories"
 )
 
 type Service struct {
