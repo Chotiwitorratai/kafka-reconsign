@@ -121,6 +121,9 @@ func TestPaymentCallbackProcess(t *testing.T) {
 				PaymentPlatform:              c.paymentPlatform,
 			}
 
+			_ = payment
+			_ = consumerService
+
 			//Assert
 			assert.Equal(t, c.expect, err)
 		})
