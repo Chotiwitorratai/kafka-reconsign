@@ -1,12 +1,11 @@
 package consumer_test
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/jcmturner/gokrb5/v8/service"
+	"github.com/stretchr/testify/assert"
 
 	"kafka-reconsign/consumer"
 	"kafka-reconsign/repositories"
