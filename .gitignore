@@ -15,3 +15,5 @@
 # vendor/
 .DS_Store
 tmp/
+notification/reconcile.go
+notification/notification.go
