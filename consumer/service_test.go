@@ -64,7 +64,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 			partnerInfoName:              "test-partner-info-name",
 			partnerInfoDeeplinkUrl:       "test-partner-info-deeplink-url",
 			paymentPlatform:              "test-payment-platform",
-			expect:                       errors.New("missing transaction Ref-ID"),
+			expect:                       errors.New(""),
 			newData:                      true,
 		},
 		{
@@ -77,7 +77,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 			partnerInfoName:              "test-partner-info-name",
 			partnerInfoDeeplinkUrl:       "test-partner-info-deeplink-url",
 			paymentPlatform:              "test-payment-platform",
-			expect:                       errors.New("missing transaction Ref-ID"),
+			expect:                       errors.New(""),
 			newData:                      false,
 		},
 		{
@@ -90,6 +90,8 @@ func TestPaymentCallbackProcess(t *testing.T) {
 			partnerInfoName:              "test-partner-info-name",
 			partnerInfoDeeplinkUrl:       "test-partner-info-deeplink-url",
 			paymentPlatform:              "test-payment-platform",
+			expect:                       errors.New("missing transaction Ref-ID"),
+			newData:                      true,
 		},
 	}
 
