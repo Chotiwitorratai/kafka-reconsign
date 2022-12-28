@@ -9,3 +9,7 @@ docker-compose -f compose-kafka-2181.yaml up -d
 
 ./kafka-console-producer.sh --broker-list localhost:9092 --topic consume-topic
 # {"refId":"REF002"}
+
+kafka-console-producer --bootstrap-server=localhost:9092 --topic=PaymentKNEXT   // for send payment messages 
+
+kafka-console-producer --broker-list localhost:9092 --topic PaymentKNEXT
