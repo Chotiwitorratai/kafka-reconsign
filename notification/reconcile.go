@@ -80,7 +80,8 @@ func (n reconcileJob) CheckAlertStatus() error {
 				if err != nil {
 					return err
 				}
-				str += fmt.Sprintf("\nmissing : %v", rec.Missing)
+				t := rec.CreatedAt.Format("2006-01-02 15:04:05")
+				str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, rec.Missing)
 				s += str
 			}
 			err = sendLineNotification(s)
@@ -123,7 +124,8 @@ func updateAlertStatus(n reconcileJob, id string, status string, count int) (str
 		RefId:  id,
 	}
 	err := n.reconcileRepo.UpdateAlert(s)
-	str := fmt.Sprintf("\n\nrefID : %v\ninsurer : %v\npayment time : %v", s.RefId, " ", s.UpdatedAt)
+
+	str := fmt.Sprintf("\n\nrefID : %v\ninsurer : %v", s.RefId, " ")
 	if err != nil {
 		return "", errors.New("update alert status error")
 	}
