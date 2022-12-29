@@ -329,8 +329,6 @@ func TestInsuranceCallbackProcess(t *testing.T) {
 				log.Print(err)
 			}
 
-			log.Print(string(data))
-
 			err = consumerService.InsuranceCallbackProcess(string(data))
 
 			//Assert
