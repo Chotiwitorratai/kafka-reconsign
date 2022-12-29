@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"kafka-reconsign/repositories"
@@ -31,53 +32,56 @@ func NewReconcileJob(reconcileRepo repositories.ReconcileRepositoryDB) Reconcile
 
 func (n reconcileJob) CheckReconcileStatus() error {
 	for {
-		data := []repositories.Alert{}
-		reconcile, err := n.reconcileRepo.GetReconcileFail()
+		reconcile, err := getReconcileFailures(n)
 		if err != nil {
 			log.Println("get reconcile error", err)
 			return err
 		}
-		if len(reconcile) > 0 {
-			for _, rec := range reconcile {
-				foundID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
-				if err != nil {
-					return err
-				}
-				if !foundID {
-					data = append(data, repositories.Alert{
-						Messages:  "test",
-						Count:     0,
-						Status:    "Fail",
-						NextAlert: time.Now().Add(5 * time.Minute),
-						RefId:     rec.TransactionRefID,
-						Missing:   "Test",
-					})
-				}
+
+		for _, rec := range reconcile {
+			foundID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
+			if err != nil {
+				return err
 			}
-			if len(data) > 0 {
-				err = n.reconcileRepo.SaveAlert(data)
-				if err != nil {
-					log.Println("save alert error", err)
-					return err
+			if !foundID {
+				if rec.Status == "Success" && rec.InsuranceStatus == "Success" {
+					_, err = updateAlertStatus(n, rec.TransactionRefID, rec.Status, 0)
+					if err != nil {
+						return err
+					}
+				} else {
+					var missing string
+					if rec.Status == "Success" {
+						missing = "paymentCallback"
+					} else {
+						missing = "insuranceCallback"
+					}
+					err = SaveAlert(n, rec.TransactionRefID, missing)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 }
 
 func (n reconcileJob) CheckAlertStatus() error {
 	for {
-		alert, err := n.reconcileRepo.GetAlertFail()
+		alert, err := getAlertFailures(n)
 		if err != nil {
-			log.Println("get alert error")
 			return err
 		}
 		if len(alert) > 0 {
 			s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", len(alert))
-			for i, rec := range alert {
-				_ = rec
-				s += fmt.Sprintf("\n\nrefID : %v\ninsurer : %v\npayment time : %v\nmissing : %v", alert[i].RefId, " ", alert[i].UpdatedAt, alert[i].Missing)
+			for _, rec := range alert {
+				str, err := updateAlertStatus(n, rec.RefId, "Fail", rec.Count+1)
+				if err != nil {
+					return err
+				}
+				str += fmt.Sprintf("\nmissing : %v", rec.Missing)
+				s += str
 			}
 			err = sendLineNotification(s)
 			if err != nil {
@@ -85,8 +89,63 @@ func (n reconcileJob) CheckAlertStatus() error {
 				return err
 			}
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
+}
+
+func getReconcileFailures(n reconcileJob) ([]repositories.Reconcile, error) {
+	reconcile, err := n.reconcileRepo.GetReconcileFail()
+	if err != nil {
+		return nil, errors.New("get reconcile failures error")
+	}
+	return reconcile, nil
+}
+
+func getAlertFailures(n reconcileJob) ([]repositories.Alert, error) {
+	alert, err := n.reconcileRepo.GetAlertFail()
+	if err != nil {
+		return nil, errors.New("get alert failures error")
+	}
+	return alert, nil
+}
+
+func getAlertExists(n reconcileJob, id string) (bool, error) {
+	foundID, err := n.reconcileRepo.GetAlertFailByID(id)
+	if err != nil {
+		return false, errors.New("get alert exist error")
+	}
+	return foundID, nil
+}
+
+func updateAlertStatus(n reconcileJob, id string, status string, count int) (string, error) {
+	s := repositories.Alert{
+		Status: status,
+		RefId:  id,
+	}
+	err := n.reconcileRepo.UpdateAlert(s)
+	str := fmt.Sprintf("\n\nrefID : %v\ninsurer : %v\npayment time : %v", s.RefId, " ", s.UpdatedAt)
+	if err != nil {
+		return "", errors.New("update alert status error")
+	}
+	return str, nil
+}
+
+func SaveAlert(n reconcileJob, id string, missing string) error {
+	data := []repositories.Alert{
+		{
+			Messages:  "test",
+			Count:     0,
+			Status:    "Fail",
+			NextAlert: time.Now().Add(5 * time.Minute),
+			RefId:     id,
+			Missing:   missing,
+		},
+	}
+	err := n.reconcileRepo.SaveAlert(data)
+	if err != nil {
+		return errors.New("save alert error")
+	}
+	return nil
 }
 
 func sendLineNotification(message string) error {
