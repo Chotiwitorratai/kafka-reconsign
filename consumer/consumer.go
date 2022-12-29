@@ -21,10 +21,10 @@ type Consumer struct {
 	Ready chan struct{}
 	wg    *sync.WaitGroup
 	pool  *ants.Pool
-	svc   *Service
+	svc   Service
 }
 
-func NewConsumer(wg *sync.WaitGroup, pool *ants.Pool, svc *Service) *Consumer {
+func NewConsumer(wg *sync.WaitGroup, pool *ants.Pool, svc Service) *Consumer {
 	return &Consumer{
 		Ready: make(chan struct{}),
 		wg:    wg,

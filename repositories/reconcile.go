@@ -46,4 +46,5 @@ type ReconcileRepositoryDB interface {
 	SaveAlert(alert []Alert) error
 	UpdateAlert(alert Alert) error
 	GetAlertFail() (alert []Alert, err error)
+	GetAlertFailByID(id string) (boo bool, err error)
 }
