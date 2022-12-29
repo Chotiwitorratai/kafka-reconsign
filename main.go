@@ -21,6 +21,7 @@ import (
 
 	"kafka-reconsign/consumer"
 	scramkafka "kafka-reconsign/internal/screamkafka"
+	"kafka-reconsign/notification"
 	"kafka-reconsign/repositories"
 )
 
@@ -81,6 +82,7 @@ func main() {
 	reconcileRepository := repositories.NewReconcileRepositoryDB(db)
 
 	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New(reconcileRepository))
+	reconcileJobHandler := notification.NewReconcileJob(reconcileRepository)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
@@ -106,6 +108,19 @@ func main() {
 	}()
 	<-consumerHandler.Ready
 	log.Println("Consumer Up and Running!")
+	go func() {
+		if err := reconcileJobHandler.CheckReconcileStatus(); err != nil {
+			log.Println(err)
+			//return
+		}
+	}()
+
+	go func() {
+		if err := reconcileJobHandler.CheckAlertStatus(); err != nil {
+			log.Println(err)
+			//return
+		}
+	}()
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)

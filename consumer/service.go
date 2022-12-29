@@ -17,11 +17,11 @@ type Service interface {
 }
 
 type service struct {
-	orderRepo repositories.ReconcileRepositoryDB
+	reconcileRepo repositories.ReconcileRepositoryDB
 }
 
-func New(orderRepo repositories.ReconcileRepositoryDB) Service {
-	return &service{orderRepo: orderRepo}
+func New(reconcileRepo repositories.ReconcileRepositoryDB) Service {
+	return &service{reconcileRepo: reconcileRepo}
 }
 
 func (s *service) Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error {
@@ -69,15 +69,15 @@ func paymentCallbackProcess(s *service, rawMessage string) (err error) {
 		return errors.New("missing transaction Ref-ID")
 	}
 
-	if foundID, err := s.orderRepo.CheckNullReconcile(payment.TransactionRefID); err != nil {
+	if foundID, err := s.reconcileRepo.CheckNullReconcile(payment.TransactionRefID); err != nil {
 		return errors.New("invalid Ref-ID error")
 	} else {
 		if foundID {
-			if err = s.orderRepo.UpdateReconcile(payment); err != nil {
+			if err = s.reconcileRepo.UpdateReconcile(payment); err != nil {
 				return errors.New("update reconcile error")
 			}
 		} else {
-			if err = s.orderRepo.SaveReconcile(payment); err != nil {
+			if err = s.reconcileRepo.SaveReconcile(payment); err != nil {
 				return errors.New("save reconcile error")
 			}
 		}
@@ -112,15 +112,15 @@ func insuranceCallbackProcess(s *service, rawMessage string) (err error) {
 		return errors.New("missing transaction Ref-ID")
 	}
 
-	if foundID, err := s.orderRepo.CheckNullReconcile(kafkaMsg.RefID); err != nil {
+	if foundID, err := s.reconcileRepo.CheckNullReconcile(kafkaMsg.RefID); err != nil {
 		return errors.New("invalid Ref-ID error")
 	} else {
 		if foundID {
-			if err = s.orderRepo.UpdateReconcile(insurance); err != nil {
+			if err = s.reconcileRepo.UpdateReconcile(insurance); err != nil {
 				return errors.New("update reconcile error")
 			}
 		} else {
-			if err = s.orderRepo.SaveReconcile(insurance); err != nil {
+			if err = s.reconcileRepo.SaveReconcile(insurance); err != nil {
 				return errors.New("save reconcile error")
 			}
 		}
