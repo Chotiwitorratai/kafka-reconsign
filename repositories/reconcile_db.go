@@ -49,3 +49,14 @@ func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
 	err = obj.db.Table("tbl_purchase_alert").Where("status = 'Fail'").Find(&alert).Error
 	return alert, err
 }
+
+func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err error) {
+	alert := []Alert{}
+	err = obj.db.Table("tbl_purchase_alert").Where("ref_id=?", id).Find(&alert).Error
+	if len(alert) == 1 {
+		return true, err
+	} else {
+		return false, err
+	}
+
+}
