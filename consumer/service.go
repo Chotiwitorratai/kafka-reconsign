@@ -16,6 +16,8 @@ import (
 
 type Service interface {
 	Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error
+	PaymentCallbackProcess(rawMessage string) (err error)
+	InsuranceCallbackProcess(rawMessage string) (err error)
 }
 
 type service struct {
@@ -29,7 +31,7 @@ func New(reconcileRepo repositories.ReconcileRepositoryDB) Service {
 func (s *service) Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error {
 	switch topic {
 	case reflect.TypeOf(model.PaymentcallBack{}).Name():
-		err := paymentCallbackProcess(s, rawMessage)
+		err := s.PaymentCallbackProcess(rawMessage)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -37,7 +39,7 @@ func (s *service) Process(topic string, ctx context.Context, kafkaHeader []*sara
 
 		return nil
 	case reflect.TypeOf(model.InsuranceCallBack{}).Name():
-		err := insuranceCallbackProcess(s, rawMessage)
+		err := s.InsuranceCallbackProcess(rawMessage)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -50,7 +52,7 @@ func (s *service) Process(topic string, ctx context.Context, kafkaHeader []*sara
 
 }
 
-func paymentCallbackProcess(s *service, rawMessage string) (err error) {
+func (s *service) PaymentCallbackProcess(rawMessage string) (err error) {
 	kafkaMsg := &model.PaymentcallBack{}
 	err = json.Unmarshal([]byte(rawMessage), kafkaMsg)
 	if err != nil {
@@ -88,7 +90,7 @@ func paymentCallbackProcess(s *service, rawMessage string) (err error) {
 	return nil
 }
 
-func insuranceCallbackProcess(s *service, rawMessage string) (err error) {
+func (s *service) InsuranceCallbackProcess(rawMessage string) (err error) {
 	kafkaMsg := &model.InsuranceCallBack{}
 
 	err = json.Unmarshal([]byte(rawMessage), kafkaMsg)
