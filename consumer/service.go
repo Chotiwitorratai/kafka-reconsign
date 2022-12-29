@@ -3,15 +3,14 @@ package consumer
 import (
 	"context"
 	"encoding/json"
-
 	"errors"
-	"kafka-reconsign/model"
-	"kafka-reconsign/repositories"
-
 	"log"
 	"reflect"
 
 	"github.com/Shopify/sarama"
+
+	"kafka-reconsign/model"
+	"kafka-reconsign/repositories"
 )
 
 type Service interface {
