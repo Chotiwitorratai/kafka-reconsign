@@ -31,7 +31,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 
 	cases := []testCases{
 		{
-			name:                         "success - new data",
+			name:                         "success - first data",
 			transactionRefID:             "test-transaction-ref-id",
 			status:                       "success",
 			transactionCreatedTimestamp:  time.Now(),
@@ -57,7 +57,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 			newData:                      false,
 		},
 		{
-			name:                         "failure - new Data",
+			name:                         "failure - first Data",
 			transactionRefID:             "test-transaction-ref-id",
 			status:                       "fail",
 			transactionCreatedTimestamp:  time.Now(),
