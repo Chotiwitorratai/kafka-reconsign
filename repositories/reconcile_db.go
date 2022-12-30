@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -33,7 +35,9 @@ func (obj reconcileRepositoryDB) UpdateReconcile(reconcile Reconcile) error {
 }
 
 func (obj reconcileRepositoryDB) GetReconcileFail() (reconcile []Reconcile, err error) {
-	err = obj.db.Table("tbl_purchase_reconcile").Where("status = '' || insurance_status = '' ").Find(&reconcile).Error
+	currentTime := time.Now()
+	newTime := currentTime.Add(-time.Minute * 1)
+	err = obj.db.Table("tbl_purchase_reconcile").Where("( status = '' OR insurance_status = '' ) AND created_at <= ?", newTime).Find(&reconcile).Error
 	return reconcile, err
 }
 
