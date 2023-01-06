@@ -9,7 +9,7 @@ import (
 type Reconcile struct {
 	gorm.Model
 	TransactionRefID             string    `gorm:"colum:transaction_ref_id"`
-	Status                       string    `gorm:"colum:status"`
+	NextStatus                   string    `gorm:"colum:next_status"`
 	TransactionCreatedTimestamp  time.Time `gorm:"colum:transaction_created_timestamp"`
 	PaymentInfoAmount            float32   `gorm:"colum:payment_info_amount"`
 	PaymentInfoWebAdditionalInfo string    `gorm:"colum:payment_info_web_additional_info"`
