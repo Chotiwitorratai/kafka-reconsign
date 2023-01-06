@@ -44,14 +44,14 @@ func (n reconcileJob) CheckReconcileStatus() error {
 				return err
 			}
 			if !foundID {
-				if rec.Status == "Success" && rec.InsuranceStatus == "Success" {
-					_, err = updateAlertStatus(n, rec.TransactionRefID, rec.Status, 0)
+				if rec.NextStatus == "Success" && rec.InsuranceStatus == "Success" {
+					_, err = updateAlertStatus(n, rec.TransactionRefID, rec.NextStatus, 0)
 					if err != nil {
 						return err
 					}
 				} else {
 					var missing string
-					if rec.Status == "Success" {
+					if rec.NextStatus == "Success" {
 						missing = "paymentCallback"
 					} else {
 						missing = "insuranceCallback"
