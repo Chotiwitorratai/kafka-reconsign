@@ -66,6 +66,10 @@ func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err erro
 	}
 
 }
-func (obj reconcileRepositoryDB) GetCountAlertFail() (int){
-	return 5
+func (obj reconcileRepositoryDB) GetCountAlertFail() (count int64, err error){
+	var alert []Alert
+	currentTime := time.Now()
+	oneweek := currentTime.Add(-time.Hour * 168)
+	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?",oneweek).Find(&alert)
+	return result.RowsAffected , result.Error
 }
