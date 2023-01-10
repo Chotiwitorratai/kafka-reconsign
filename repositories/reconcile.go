@@ -29,15 +29,14 @@ type Reconcile struct {
 }
 type Alert struct {
 	gorm.Model
-	Messages  string    `gorm:"colum:messages"`
-	Count     int       `gorm:"colum:count"`
-	Status    string    `gorm:"colum:status;default:Fail"`
-	NextAlert time.Time `gorm:"colum:next_alert"`
-	RefId     string    `gorm:"colum:ref_id"`
-	Missing   string    `gorm:"colum:missing"`
-	InsurerTime     string    `gorm:"colum:insurer_time"`
-	PaymentTime   string    `gorm:"colum:payment_time"`
-	
+	Messages    string    `gorm:"colum:messages"`
+	Count       int       `gorm:"colum:count"`
+	Status      string    `gorm:"colum:status;default:Fail"`
+	NextAlert   time.Time `gorm:"colum:next_alert"`
+	RefId       string    `gorm:"colum:ref_id"`
+	Missing     string    `gorm:"colum:missing"`
+	Insurer     string    `gorm:"colum:insurer"`
+	PaymentTime time.Time `gorm:"colum:payment_time"`
 }
 
 type ReconcileRepositoryDB interface {
@@ -50,5 +49,5 @@ type ReconcileRepositoryDB interface {
 	UpdateAlert(alert Alert) error
 	GetAlertFail() (alert []Alert, err error)
 	GetAlertFailByID(id string) (boo bool, err error)
-	GetCountAlertFail() (count int64,err error)
+	GetCountAlertFail() (count int64, err error)
 }
