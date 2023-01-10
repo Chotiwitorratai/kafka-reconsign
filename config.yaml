@@ -26,6 +26,12 @@ db:
   password: 11022539
   database: micro
   parseTime: true
+
+notificationInterval: 300
+checkReconcileInterval: 60
+schedule:
+  startHour: 7
+  endHour: 20
 # secrets:
 #   kafkaUsername: "sit_msg_cdi"
 #   kafkaPassword: "IVUWDLIgVauVwJG"

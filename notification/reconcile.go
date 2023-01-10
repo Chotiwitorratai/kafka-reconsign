@@ -10,12 +10,19 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 const (
 	lineNotifyAPI = "https://notify-api.line.me/api/notify"
 	lineToken     = "HD5RBYffvJAao8Qxm3mX7Zg1CpSQrEGfdVWlumFipuY"
 )
+
+var reconcileTime time.Duration
+var notificationTime time.Duration
+var startHour int
+var endHour int
 
 type ReconcileJob interface {
 	CheckReconcileStatus() error
@@ -27,43 +34,52 @@ type reconcileJob struct {
 }
 
 func NewReconcileJob(reconcileRepo repositories.ReconcileRepositoryDB) ReconcileJob {
+	initConfig()
 	return reconcileJob{reconcileRepo: reconcileRepo}
 }
 
 func (n reconcileJob) CheckReconcileStatus() error {
 	for {
+		alertID := []string{}
 		reconcile, err := getReconcileFailures(n)
 		if err != nil {
 			log.Println("get reconcile error", err)
 			return err
 		}
+		alert, err := getAlertFailures(n)
+		if err != nil {
+			return err
+		}
 
 		for _, rec := range reconcile {
+			alertID = append(alertID, rec.TransactionRefID)
 			foundID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
 			if err != nil {
 				return err
 			}
 			if !foundID {
-				if rec.NextStatus == "Success" && rec.InsuranceStatus == "Success" {
-					_, err = updateAlertStatus(n, rec.TransactionRefID, rec.NextStatus, 0)
-					if err != nil {
-						return err
-					}
+
+				if rec.NextStatus == "Success" {
+					err = SaveAlert(n, rec.TransactionRefID, "paymentCallback", rec.TransactionCreatedTimestamp.Format("2006-01-02 15:04:05"))
+
 				} else {
-					var missing string
-					if rec.NextStatus == "Success" {
-						missing = "paymentCallback"
-					} else {
-						missing = "insuranceCallback"
-					}
-					err = SaveAlert(n, rec.TransactionRefID, missing)
-					if err != nil {
-						return err
-					}
+					err = SaveAlert(n, rec.TransactionRefID, "insuranceCallback", rec.CreatedAt.Format("2006-01-02 15:04:05"))
+				}
+				if err != nil {
+					return err
 				}
 			}
 		}
-		time.Sleep(60 * time.Second)
+		for _, alrt := range alert {
+			if !contains(alertID, alrt.RefId) {
+				_, err = updateAlertStatus(n, alrt.RefId, "success", 0)
+				if err != nil {
+					return err
+				}
+			}
+
+		}
+		time.Sleep(reconcileTime * time.Second)
 	}
 }
 
@@ -84,14 +100,41 @@ func (n reconcileJob) CheckAlertStatus() error {
 				str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, rec.Missing)
 				s += str
 			}
-			err = sendLineNotification(s)
-			if err != nil {
-				log.Println("fail to notify :", err)
-				return err
+			if workingHour() {
+				err = sendLineNotification(s)
+				if err != nil {
+					log.Println("fail to notify :", err)
+					return err
+				}
 			}
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(notificationTime * time.Second)
 	}
+}
+
+func initConfig() {
+	reconcileTime = viper.GetDuration("checkReconcileInterval")
+	notificationTime = viper.GetDuration("notificationInterval")
+	startHour = viper.GetInt("schedule/startHour")
+	endHour = viper.GetInt("schedule/endHour")
+}
+
+func workingHour() bool {
+	now := time.Now()
+	currentHour := now.Hour()
+	if currentHour >= startHour && currentHour < endHour {
+		return true
+	}
+	return false
+}
+
+func contains(s []string, valueToCheck string) bool {
+	for _, v := range s {
+		if v == valueToCheck {
+			return true
+		}
+	}
+	return false
 }
 
 func getReconcileFailures(n reconcileJob) ([]repositories.Reconcile, error) {
@@ -132,15 +175,17 @@ func updateAlertStatus(n reconcileJob, id string, status string, count int) (str
 	return str, nil
 }
 
-func SaveAlert(n reconcileJob, id string, missing string) error {
+func SaveAlert(n reconcileJob, id string, missing string, paydate string) error {
 	data := []repositories.Alert{
 		{
-			Messages:  "test",
-			Count:     0,
-			Status:    "Fail",
-			NextAlert: time.Now().Add(5 * time.Minute),
-			RefId:     id,
-			Missing:   missing,
+			Messages:    "test",
+			Count:       0,
+			Status:      "Fail",
+			NextAlert:   time.Now().Add(5 * time.Minute),
+			RefId:       id,
+			Missing:     missing,
+			InsurerTime: "",
+			PaymentTime: paydate,
 		},
 	}
 	err := n.reconcileRepo.SaveAlert(data)
