@@ -60,10 +60,10 @@ func (n reconcileJob) CheckReconcileStatus() error {
 			if !foundID {
 
 				if rec.NextStatus == "Success" {
-					err = SaveAlert(n, rec.TransactionRefID, "paymentCallback", rec.TransactionCreatedTimestamp.Format("2006-01-02 15:04:05"))
+					err = SaveAlert(n, rec.TransactionRefID, "paymentCallback", rec.PartnerInfoName, rec.TransactionCreatedTimestamp)
 
 				} else {
-					err = SaveAlert(n, rec.TransactionRefID, "insuranceCallback", rec.CreatedAt.Format("2006-01-02 15:04:05"))
+					err = SaveAlert(n, rec.TransactionRefID, "insuranceCallback", rec.PartnerInfoName, rec.CreatedAt)
 				}
 				if err != nil {
 					return err
@@ -175,7 +175,7 @@ func updateAlertStatus(n reconcileJob, id string, status string, count int) (str
 	return str, nil
 }
 
-func SaveAlert(n reconcileJob, id string, missing string, paydate string) error {
+func SaveAlert(n reconcileJob, id string, missing string, insurer string, paydate time.Time) error {
 	data := []repositories.Alert{
 		{
 			Messages:    "test",
@@ -184,7 +184,7 @@ func SaveAlert(n reconcileJob, id string, missing string, paydate string) error 
 			NextAlert:   time.Now().Add(5 * time.Minute),
 			RefId:       id,
 			Missing:     missing,
-			InsurerTime: "",
+			Insurer:     insurer,
 			PaymentTime: paydate,
 		},
 	}
