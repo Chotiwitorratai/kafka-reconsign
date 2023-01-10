@@ -35,6 +35,9 @@ type Alert struct {
 	NextAlert time.Time `gorm:"colum:next_alert"`
 	RefId     string    `gorm:"colum:ref_id"`
 	Missing   string    `gorm:"colum:missing"`
+	InsurerTime     string    `gorm:"colum:insurer_time"`
+	PaymentTime   string    `gorm:"colum:payment_time"`
+	
 }
 
 type ReconcileRepositoryDB interface {
@@ -47,4 +50,5 @@ type ReconcileRepositoryDB interface {
 	UpdateAlert(alert Alert) error
 	GetAlertFail() (alert []Alert, err error)
 	GetAlertFailByID(id string) (boo bool, err error)
+	GetCountAlertFail() (int)
 }

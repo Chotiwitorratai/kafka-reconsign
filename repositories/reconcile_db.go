@@ -36,8 +36,8 @@ func (obj reconcileRepositoryDB) UpdateReconcile(reconcile Reconcile) error {
 
 func (obj reconcileRepositoryDB) GetReconcileFail() (reconcile []Reconcile, err error) {
 	currentTime := time.Now()
-	newTime := currentTime.Add(-time.Minute * 1)
-	err = obj.db.Table("tbl_purchase_reconcile").Where("( status = '' OR insurance_status = '' ) AND created_at <= ?", newTime).Find(&reconcile).Error
+	oneMin := currentTime.Add(-time.Minute * 1)
+	err = obj.db.Table("tbl_purchase_reconcile").Where("( next_status = '' OR insurance_status = '' ) AND created_at <= ?", oneMin).Find(&reconcile).Error
 	return reconcile, err
 }
 
@@ -50,7 +50,9 @@ func (obj reconcileRepositoryDB) UpdateAlert(alert Alert) error {
 }
 
 func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
-	err = obj.db.Table("tbl_purchase_alert").Where("status = 'Fail'").Find(&alert).Error
+	currentTime := time.Now()
+	oneDay := currentTime.Add(-time.Hour * 24)
+	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?",oneDay).Find(&alert).Error
 	return alert, err
 }
 
@@ -63,4 +65,7 @@ func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err erro
 		return false, err
 	}
 
+}
+func (obj reconcileRepositoryDB) GetCountAlertFail() (int){
+	return 5
 }
