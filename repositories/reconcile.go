@@ -8,8 +8,8 @@ import (
 
 type Reconcile struct {
 	gorm.Model
-	TransactionRefID             string    `gorm:"colum:transaction_ref_id"`
-	NextStatus                   string    `gorm:"colum:next_status"`
+	TransactionRefID             string    `gorm:"colum:transaction_ref_id;index"`
+	NextStatus                   string    `gorm:"colum:next_status;index"`
 	TransactionCreatedTimestamp  time.Time `gorm:"colum:transaction_created_timestamp"`
 	PaymentInfoAmount            float32   `gorm:"colum:payment_info_amount"`
 	PaymentInfoWebAdditionalInfo string    `gorm:"colum:payment_info_web_additional_info"`
@@ -22,7 +22,7 @@ type Reconcile struct {
 	EffectiveDate                time.Time `gorm:"colum:effective_date"`
 	ExpireDate                   time.Time `gorm:"colum:expire_date"`
 	IssueDate                    time.Time `gorm:"colum:issue_date"`
-	InsuranceStatus              string    `gorm:"colum:insurance_status"`
+	InsuranceStatus              string    `gorm:"colum:insurance_status;index"`
 	TotalSumInsured              float32   `gorm:"colum:total_sum_insured"`
 	ProductOwner                 string    `gorm:"colum:product_owner"`
 	PlanType                     string    `gorm:"colum:plan_type"`
@@ -31,9 +31,9 @@ type Alert struct {
 	gorm.Model
 	Messages    string    `gorm:"colum:messages"`
 	Count       int       `gorm:"colum:count"`
-	Status      string    `gorm:"colum:status;default:Fail"`
+	Status      string    `gorm:"colum:status;default:Fail;index"`
 	NextAlert   time.Time `gorm:"colum:next_alert"`
-	RefId       string    `gorm:"colum:ref_id"`
+	RefId       string    `gorm:"colum:ref_id;index"`
 	Missing     string    `gorm:"colum:missing"`
 	Insurer     string    `gorm:"colum:insurer"`
 	PaymentTime time.Time `gorm:"colum:payment_time"`
