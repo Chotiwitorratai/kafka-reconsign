@@ -115,13 +115,6 @@ func main() {
 		}
 	}()
 
-	go func() {
-		if err := reconcileJobHandler.CheckAlertStatus(); err != nil {
-			log.Println(err)
-			//return
-		}
-	}()
-
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 

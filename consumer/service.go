@@ -2,13 +2,20 @@ package consumer
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"reflect"
 
 	"github.com/Shopify/sarama"
 
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/md5"
+	"crypto/rand"
 	"kafka-reconsign/model"
 	"kafka-reconsign/repositories"
 )
@@ -60,7 +67,7 @@ func (s *service) PaymentCallbackProcess(rawMessage string) (err error) {
 
 	payment := repositories.Reconcile{
 		TransactionRefID:             kafkaMsg.TransactionRefID,
-		NextStatus:                       kafkaMsg.Status,
+		NextStatus:                   kafkaMsg.Status,
 		PaymentInfoAmount:            kafkaMsg.PaymentInfoAmount,
 		PaymentInfoWebAdditionalInfo: kafkaMsg.PaymentInfoWebAdditionalInfo,
 		PartnerInfoName:              kafkaMsg.PartnerInfoName,
@@ -97,9 +104,14 @@ func (s *service) InsuranceCallbackProcess(rawMessage string) (err error) {
 		return err
 	}
 
+	ciphertext, err := encrypt([]byte(kafkaMsg.IdCard), "password")
+	if err != nil {
+		return errors.New("error encrypt id card")
+	}
+	cipherIDcard := fmt.Sprintf("%v", ciphertext)
 	insurance := repositories.Reconcile{
 		TransactionRefID: kafkaMsg.RefID,
-		IdCard:           kafkaMsg.IdCard,
+		IdCard:           cipherIDcard,
 		PlanCode:         kafkaMsg.PlanCode,
 		PlanName:         kafkaMsg.PlanName,
 		EffectiveDate:    kafkaMsg.EffectiveDate,
@@ -130,4 +142,45 @@ func (s *service) InsuranceCallbackProcess(rawMessage string) (err error) {
 	}
 
 	return nil
+}
+
+func createHash(key string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func encrypt(data []byte, passphrase string) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(createHash(passphrase)))
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	io.ReadFull(rand.Reader, nonce)
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	return ciphertext, nil
+}
+
+func decrypt(data []byte, passphrase string) ([]byte, error) {
+	key := []byte(createHash(passphrase))
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := gcm.NonceSize()
+
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }

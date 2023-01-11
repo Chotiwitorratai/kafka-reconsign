@@ -53,18 +53,25 @@ func (n reconcileJob) CheckReconcileStatus() error {
 
 		for _, rec := range reconcile {
 			alertID = append(alertID, rec.TransactionRefID)
-			foundID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
+			existRefID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
 			if err != nil {
 				return err
 			}
-			if !foundID {
+			if !existRefID {
 
 				if rec.NextStatus == "Success" {
 					err = SaveAlert(n, rec.TransactionRefID, "paymentCallback", rec.PartnerInfoName, rec.TransactionCreatedTimestamp)
-
+					if err != nil {
+						return err
+					}
 				} else {
 					err = SaveAlert(n, rec.TransactionRefID, "insuranceCallback", rec.PartnerInfoName, rec.CreatedAt)
+					if err != nil {
+						return err
+					}
 				}
+
+				err = n.CheckAlertStatus()
 				if err != nil {
 					return err
 				}
@@ -84,32 +91,37 @@ func (n reconcileJob) CheckReconcileStatus() error {
 }
 
 func (n reconcileJob) CheckAlertStatus() error {
-	for {
-		alert, err := getAlertFailures(n)
-		if err != nil {
-			return err
-		}
-		if len(alert) > 0 {
-			s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", len(alert))
-			for _, rec := range alert {
-				str, err := updateAlertStatus(n, rec.RefId, "Fail", rec.Count+1)
-				if err != nil {
-					return err
-				}
+	alert, err := getAlertFailures(n)
+	if err != nil {
+		return err
+	}
+	failcount, err := n.reconcileRepo.GetCountAlertFail()
+	if err != nil {
+		return err
+	}
+
+	if len(alert) > 0 {
+		s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", failcount)
+		for i, rec := range alert {
+			str, err := updateAlertStatus(n, rec.RefId, "Fail", rec.Count+1)
+			if err != nil {
+				return err
+			}
+			if i <= 3 {
 				t := rec.CreatedAt.Format("2006-01-02 15:04:05")
 				str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, rec.Missing)
 				s += str
 			}
-			if workingHour() {
-				err = sendLineNotification(s)
-				if err != nil {
-					log.Println("fail to notify :", err)
-					return err
-				}
+		}
+		if workingHour() {
+			err = sendLineNotification(s)
+			if err != nil {
+				log.Println("fail to notify :", err)
+				return err
 			}
 		}
-		time.Sleep(notificationTime * time.Second)
 	}
+	return nil
 }
 
 func initConfig() {
