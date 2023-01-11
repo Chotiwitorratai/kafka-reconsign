@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"log"
 	"time"
 
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
 
@@ -50,9 +52,11 @@ func (obj reconcileRepositoryDB) UpdateAlert(alert Alert) error {
 }
 
 func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
+	config()
+	hour := viper.GetInt("repository.DayGetAlertFail") * 24
 	currentTime := time.Now()
-	oneDay := currentTime.Add(-time.Hour * 24)
-	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?",oneDay).Find(&alert).Error
+	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
+	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert).Error
 	return alert, err
 }
 
@@ -66,10 +70,20 @@ func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err erro
 	}
 
 }
-func (obj reconcileRepositoryDB) GetCountAlertFail() (count int64, err error){
+func (obj reconcileRepositoryDB) GetCountAlertFail() (count int64, err error) {
+	config()
 	var alert []Alert
+	hour := viper.GetInt("repository.DayGetCountAlertFail") * 24
 	currentTime := time.Now()
-	oneweek := currentTime.Add(-time.Hour * 168)
-	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?",oneweek).Find(&alert)
-	return result.RowsAffected , result.Error
+	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
+	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert)
+	return result.RowsAffected, result.Error
+}
+func config() {
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Panicf("fatal error config file: %s", err)
+	}
 }

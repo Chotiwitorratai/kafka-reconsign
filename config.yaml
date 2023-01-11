@@ -35,3 +35,7 @@ schedule:
 # secrets:
 #   kafkaUsername: "sit_msg_cdi"
 #   kafkaPassword: "IVUWDLIgVauVwJG"
+
+repository:
+  DayGetCountAlertFail: 7
+  DayGetAlertFail: 1
