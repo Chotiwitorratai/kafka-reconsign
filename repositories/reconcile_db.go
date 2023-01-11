@@ -55,8 +55,8 @@ func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
 	config()
 	hour := viper.GetInt("repository.DayGetAlertFail") * 24
 	currentTime := time.Now()
-	oneDay := currentTime.Add(-time.Hour * time.Duration(hour))
-	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", oneDay).Find(&alert).Error
+	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
+	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert).Error
 	return alert, err
 }
 
@@ -75,8 +75,8 @@ func (obj reconcileRepositoryDB) GetCountAlertFail() (count int64, err error) {
 	var alert []Alert
 	hour := viper.GetInt("repository.DayGetCountAlertFail") * 24
 	currentTime := time.Now()
-	oneweek := currentTime.Add(-time.Hour * time.Duration(hour))
-	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?", oneweek).Find(&alert)
+	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
+	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert)
 	return result.RowsAffected, result.Error
 }
 func config() {
