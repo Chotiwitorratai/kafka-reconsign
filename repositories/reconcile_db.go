@@ -37,9 +37,8 @@ func (obj reconcileRepositoryDB) UpdateReconcile(reconcile Reconcile) error {
 }
 
 func (obj reconcileRepositoryDB) GetReconcileFail() (reconcile []Reconcile, err error) {
-	currentTime := time.Now()
-	oneMin := currentTime.Add(-time.Minute * 1)
-	err = obj.db.Table("tbl_purchase_reconcile").Where("( next_status = '' OR insurance_status = '' ) AND created_at <= ?", oneMin).Find(&reconcile).Error
+	oneMiuteAgo := time.Now().Add(-time.Minute * 1)
+	err = obj.db.Table("tbl_purchase_reconcile").Where("( next_status = '' OR insurance_status = '' ) AND created_at <= ?", oneMiuteAgo).Find(&reconcile).Error
 	return reconcile, err
 }
 
@@ -52,11 +51,9 @@ func (obj reconcileRepositoryDB) UpdateAlert(alert Alert) error {
 }
 
 func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
-	config()
-	hour := viper.GetInt("repository.DayGetAlertFail") * 24
-	currentTime := time.Now()
-	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
-	err = obj.db.Order("created_at desc").Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert).Error
+	CallConfig()
+	hourTimeAgo := time.Now().Add(-time.Hour * time.Duration(viper.GetInt("repository.DayGetAlertFail") * 24))
+	err = obj.db.Order("created_at desc").Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTimeAgo).Find(&alert).Error
 	return alert, err
 }
 
@@ -71,18 +68,15 @@ func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err erro
 
 }
 func (obj reconcileRepositoryDB) GetCountAlertFail() (count int64, err error) {
-	config()
+	CallConfig()
 	var alert []Alert
-	hour := viper.GetInt("repository.DayGetCountAlertFail") * 24
-	currentTime := time.Now()
-	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
-	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert)
+	hourTimeAgo := time.Now().Add(-time.Hour * time.Duration(viper.GetInt("repository.DayGetCountAlertFail") * 24))
+	result := obj.db.Table("tbl_purchase_alert").Where("status = 'Fail' AND created_at >= ?", hourTimeAgo).Find(&alert)
 	return result.RowsAffected, result.Error
 }
-func config() {
+func CallConfig() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
-
 	if err := viper.ReadInConfig(); err != nil {
 		log.Panicf("fatal error config file: %s", err)
 	}
