@@ -49,3 +49,8 @@ func (m *reconcileRepositoryMock) GetAlertFailByID(id string) (boo bool, err err
 	args := m.Called(id)
 	return args.Get(0).(bool), args.Error(1)
 }
+
+func (m *reconcileRepositoryMock) GetCountAlertFail() (count int64, err error) {
+	args := m.Called()
+	return args.Get(0).(int64), args.Error(1)
+}

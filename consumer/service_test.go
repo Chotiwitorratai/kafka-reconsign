@@ -108,7 +108,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 			reconcileData := repositories.Reconcile{
 				Model:                        gorm.Model{},
 				TransactionRefID:             c.transactionRefID,
-				NextStatus:                       c.status,
+				NextStatus:                   c.status,
 				TransactionCreatedTimestamp:  time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
 				PaymentInfoAmount:            c.paymentInfoAmount,
 				PaymentInfoWebAdditionalInfo: c.paymentInfoWebAdditionalInfo,
@@ -136,7 +136,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 
 			payment := repositories.Reconcile{
 				TransactionRefID:             c.transactionRefID,
-				NextStatus:                       c.status,
+				NextStatus:                   c.status,
 				PaymentInfoAmount:            c.paymentInfoAmount,
 				PaymentInfoWebAdditionalInfo: c.paymentInfoWebAdditionalInfo,
 				PartnerInfoName:              c.partnerInfoName,
@@ -283,7 +283,7 @@ func TestInsuranceCallbackProcess(t *testing.T) {
 			insuranceData := repositories.Reconcile{
 				Model:                        gorm.Model{},
 				TransactionRefID:             c.refID,
-				NextStatus:                       "",
+				NextStatus:                   "",
 				TransactionCreatedTimestamp:  time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC),
 				PaymentInfoAmount:            0,
 				PaymentInfoWebAdditionalInfo: "",
