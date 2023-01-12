@@ -56,13 +56,13 @@ func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
 	hour := viper.GetInt("repository.DayGetAlertFail") * 24
 	currentTime := time.Now()
 	hourTime := currentTime.Add(-time.Hour * time.Duration(hour))
-	err = obj.db.Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert).Error
+	err = obj.db.Order("created_at desc").Table("tbl_purchase_alert").Limit(20).Where("status = 'Fail' AND created_at >= ?", hourTime).Find(&alert).Error
 	return alert, err
 }
 
 func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err error) {
 	alert := []Alert{}
-	err = obj.db.Table("tbl_purchase_alert").Where("ref_id=?", id).Find(&alert).Error
+	err = obj.db.Order("created_at desc").Table("tbl_purchase_alert").Where("ref_id=?", id).Find(&alert).Error
 	if len(alert) == 1 {
 		return true, err
 	} else {
