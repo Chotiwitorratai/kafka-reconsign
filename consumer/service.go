@@ -60,7 +60,7 @@ func (s *service) PaymentCallbackProcess(rawMessage string) (err error) {
 
 	payment := repositories.Reconcile{
 		TransactionRefID:             kafkaMsg.TransactionRefID,
-		NextStatus:                       kafkaMsg.Status,
+		NextStatus:                   kafkaMsg.Status,
 		PaymentInfoAmount:            kafkaMsg.PaymentInfoAmount,
 		PaymentInfoWebAdditionalInfo: kafkaMsg.PaymentInfoWebAdditionalInfo,
 		PartnerInfoName:              kafkaMsg.PartnerInfoName,

@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"kafka-reconsign/repositories"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"kafka-reconsign/repositories"
 )
 
 const (
