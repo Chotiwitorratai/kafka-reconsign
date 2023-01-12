@@ -62,7 +62,7 @@ func (obj reconcileRepositoryDB) GetAlertFail() (alert []Alert, err error) {
 
 func (obj reconcileRepositoryDB) GetAlertFailByID(id string) (boo bool, err error) {
 	alert := []Alert{}
-	err = obj.db.Order("created_at desc").Table("tbl_purchase_alert").Where("ref_id=?", id).Find(&alert).Error
+	err = obj.db.Table("tbl_purchase_alert").Where("ref_id=?", id).Find(&alert).Error
 	if len(alert) == 1 {
 		return true, err
 	} else {
