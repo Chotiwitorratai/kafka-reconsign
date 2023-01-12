@@ -1,14 +1,13 @@
 package notification
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"kafka-reconsign/repositories"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -208,39 +207,27 @@ func SaveAlert(n reconcileJob, id string, missing string, insurer string, paydat
 }
 
 func sendLineNotification(message string) error {
-	// Create a new HTTP client
-	client := &http.Client{}
-
-	// Create a new POST request
-	req, err := http.NewRequest("POST", lineNotifyAPI, nil)
+	req, err := http.NewRequest("POST", lineNotifyAPI, bytes.NewBuffer([]byte("message="+message)))
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
-	// Set the authorization header
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+lineToken)
 
-	// Create a new URL-encoded form
-	form := url.Values{}
-	form.Add("message", message)
-
-	// Set the body of the request to the form
-	req.Body = ioutil.NopCloser(strings.NewReader(form.Encode()))
-
-	// Set the content type header
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Send the request
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer res.Body.Close()
 
-	// Check the response status code
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("Failed to send notification: %s", res.Status)
+	_, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
-
 	return nil
 }
