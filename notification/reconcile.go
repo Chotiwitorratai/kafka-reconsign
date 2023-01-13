@@ -39,7 +39,10 @@ func NewReconcileJob(reconcileRepo repositories.ReconcileRepositoryDB) Reconcile
 
 func (n reconcileJob) CheckReconcileStatus() error {
 	for {
+		newID := false
+		data := []repositories.Alert{}
 		alertID := []string{}
+
 		reconcile, err := getReconcileFailures(n)
 		if err != nil {
 			log.Println("get reconcile error", err)
@@ -57,25 +60,34 @@ func (n reconcileJob) CheckReconcileStatus() error {
 				return err
 			}
 			if !existRefID {
-
+				newID = true
+				missing := ""
 				if rec.NextStatus == "Success" {
-					err = SaveAlert(n, rec.TransactionRefID, "paymentCallback", rec.PartnerInfoName, rec.TransactionCreatedTimestamp)
-					if err != nil {
-						return err
-					}
+					missing = "insuranceCallback"
 				} else {
-					err = SaveAlert(n, rec.TransactionRefID, "insuranceCallback", rec.PartnerInfoName, rec.CreatedAt)
-					if err != nil {
-						return err
-					}
+					missing = "paymentNext"
 				}
 
-				err = n.CheckAlertStatus()
-				if err != nil {
-					return err
-				}
+				data = append(data, repositories.Alert{
+					Messages:    "test",
+					Count:       0,
+					Status:      "Fail",
+					NextAlert:   time.Now().Add(5 * time.Minute),
+					RefId:       rec.TransactionRefID,
+					Missing:     missing,
+					Insurer:     rec.PartnerInfoName,
+					PaymentTime: rec.TransactionCreatedTimestamp,
+				})
 			}
 		}
+		if newID {
+			err = n.reconcileRepo.SaveAlert(data)
+			if err != nil {
+				fmt.Println(data)
+				return errors.New("save alert error")
+			}
+		}
+
 		for _, alrt := range alert {
 			if !contains(alertID, alrt.RefId) {
 				_, err = updateAlertStatus(n, alrt.RefId, "success", 0)
@@ -90,44 +102,47 @@ func (n reconcileJob) CheckReconcileStatus() error {
 }
 
 func (n reconcileJob) CheckAlertStatus() error {
-	alert, err := getAlertFailures(n)
-	if err != nil {
-		return err
-	}
-	failcount, err := n.reconcileRepo.GetCountAlertFail()
-	if err != nil {
-		return err
-	}
+	for {
+		alert, err := getAlertFailures(n)
+		if err != nil {
+			return err
+		}
+		failcount, err := n.reconcileRepo.GetCountAlertFail()
+		if err != nil {
+			return err
+		}
 
-	if len(alert) > 0 {
-		s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", failcount)
-		for i, rec := range alert {
-			str, err := updateAlertStatus(n, rec.RefId, "Fail", rec.Count+1)
-			if err != nil {
-				return err
+		if len(alert) > 0 {
+			s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", failcount)
+			for i, a := range alert {
+				str, err := updateAlertStatus(n, a.RefId, "Fail", a.Count+1)
+				if err != nil {
+					return err
+				}
+				if i <= 2 {
+					t := a.PaymentTime.Format("2006-01-02 15:04:05")
+					str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, a.Missing)
+					s += str
+				}
 			}
-			if i <= 3 {
-				t := rec.CreatedAt.Format("2006-01-02 15:04:05")
-				str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, rec.Missing)
-				s += str
+			if workingHour() {
+				log.Println("start notification")
+				err = sendLineNotification(s)
+				if err != nil {
+					log.Println("fail to notify :", err)
+					return err
+				}
 			}
 		}
-		if workingHour() {
-			err = sendLineNotification(s)
-			if err != nil {
-				log.Println("fail to notify :", err)
-				return err
-			}
-		}
+		time.Sleep(notificationTime * time.Second)
 	}
-	return nil
 }
 
 func initConfig() {
 	reconcileTime = viper.GetDuration("checkReconcileInterval")
 	notificationTime = viper.GetDuration("notificationInterval")
-	startHour = viper.GetInt("schedule/startHour")
-	endHour = viper.GetInt("schedule/endHour")
+	startHour = viper.GetInt("schedule.startHour")
+	endHour = viper.GetInt("schedule.endHour")
 }
 
 func workingHour() bool {
@@ -184,26 +199,6 @@ func updateAlertStatus(n reconcileJob, id string, status string, count int) (str
 		return "", errors.New("update alert status error")
 	}
 	return str, nil
-}
-
-func SaveAlert(n reconcileJob, id string, missing string, insurer string, paydate time.Time) error {
-	data := []repositories.Alert{
-		{
-			Messages:    "test",
-			Count:       0,
-			Status:      "Fail",
-			NextAlert:   time.Now().Add(5 * time.Minute),
-			RefId:       id,
-			Missing:     missing,
-			Insurer:     insurer,
-			PaymentTime: paydate,
-		},
-	}
-	err := n.reconcileRepo.SaveAlert(data)
-	if err != nil {
-		return errors.New("save alert error")
-	}
-	return nil
 }
 
 func sendLineNotification(message string) error {

@@ -3,97 +3,48 @@ package consumer
 import (
 	"context"
 	"encoding/base32"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"reflect"
 
 	"github.com/Shopify/sarama"
 	"github.com/spf13/viper"
 
+	"crypto/md5"
 	"crypto/rand"
 	"kafka-reconsign/internal/util"
 	"kafka-reconsign/model"
 	"kafka-reconsign/repositories"
 )
 
-type Service interface {
+type ServiceInsurance interface {
 	Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error
-	PaymentCallbackProcess(rawMessage string) (err error)
 	InsuranceCallbackProcess(rawMessage string) (err error)
 }
 
-type service struct {
+type serviceInsurance struct {
 	reconcileRepo repositories.ReconcileRepositoryDB
 }
 
-func New(reconcileRepo repositories.ReconcileRepositoryDB) Service {
-	return &service{reconcileRepo: reconcileRepo}
+func NewServiceInsurance(reconcileRepo repositories.ReconcileRepositoryDB) ServiceInsurance {
+	return &serviceInsurance{reconcileRepo: reconcileRepo}
 }
 
-func (s *service) Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error {
-	switch topic {
-	case reflect.TypeOf(model.PaymentcallBack{}).Name():
-		err := s.PaymentCallbackProcess(rawMessage)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-
-		return nil
-	case reflect.TypeOf(model.InsuranceCallBack{}).Name():
+func (s *serviceInsurance) Process(topic string, ctx context.Context, kafkaHeader []*sarama.RecordHeader, rawMessage string) error {
+	if topic == reflect.TypeOf(model.InsuranceCallBack{}).Name() {
 		err := s.InsuranceCallbackProcess(rawMessage)
 		if err != nil {
 			log.Println(err)
 			return err
 		}
-		return nil
-	default:
-		return nil
-
 	}
-
-}
-
-func (s *service) PaymentCallbackProcess(rawMessage string) (err error) {
-	kafkaMsg := &model.PaymentcallBack{}
-	err = json.Unmarshal([]byte(rawMessage), kafkaMsg)
-	if err != nil {
-		return err
-	}
-
-	payment := repositories.Reconcile{
-		TransactionRefID:             kafkaMsg.TransactionRefID,
-		NextStatus:                   kafkaMsg.Status,
-		PaymentInfoAmount:            kafkaMsg.PaymentInfoAmount,
-		PaymentInfoWebAdditionalInfo: kafkaMsg.PaymentInfoWebAdditionalInfo,
-		PartnerInfoName:              kafkaMsg.PartnerInfoName,
-		PartnerInfoDeeplinkUrl:       kafkaMsg.PartnerInfoDeeplinkUrl,
-		PaymentPlatform:              kafkaMsg.PaymentPlatform,
-	}
-
-	if payment.TransactionRefID == "" {
-		return errors.New("missing transaction Ref-ID")
-	}
-
-	if foundID, err := s.reconcileRepo.CheckNullReconcile(payment.TransactionRefID); err != nil {
-		return errors.New("invalid Ref-ID error")
-	} else {
-		if foundID {
-			if err = s.reconcileRepo.UpdateReconcile(payment); err != nil {
-				return errors.New("update reconcile error")
-			}
-		} else {
-			if err = s.reconcileRepo.SaveReconcile(payment); err != nil {
-				return errors.New("save reconcile error")
-			}
-		}
-	}
-
 	return nil
 }
 
-func (s *service) InsuranceCallbackProcess(rawMessage string) (err error) {
+func (s *serviceInsurance) InsuranceCallbackProcess(rawMessage string) (err error) {
 	kafkaMsg := &model.InsuranceCallBack{}
 
 	err = json.Unmarshal([]byte(rawMessage), kafkaMsg)
@@ -146,11 +97,45 @@ func GenerateNonce(length int) string {
 	}
 	return base32.StdEncoding.EncodeToString(randomBytes)[:length]
 }
+func GetNonceFromCypher(cypher string) (nonce string, cyphertext string) {
+	nonce = cypher[len(cypher)-12:]
+	cyphertext = cypher[:len(cypher)-12]
+	return nonce, cyphertext
+}
+
+func createHash(key string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
 
 func encrypt(Identifier string) string {
 	genNonce := GenerateNonce(viper.GetInt("cdi.nonceLength"))
-	encryptor := util.NewAES([]byte(viper.GetString("secrets.cryptoAesKey")), []byte(genNonce))
+	aesKey := createHash(viper.GetString("secrets.cryptoAesKey"))
+	encryptor := util.NewAES([]byte(aesKey), []byte(genNonce))
 	citizenEncrypted := encryptor.Encrypt(Identifier)
 	cypther := citizenEncrypted + genNonce
 	return cypther
 }
+
+func decrypt(cyphertext string) (string, error) {
+	nonce, cypher := GetNonceFromCypher(cyphertext)
+	if len(nonce) != 12 {
+		return "", errors.New("nonce not working")
+	}
+	aesKey := createHash(viper.GetString("secrets.cryptoAesKey"))
+	crypto := util.NewAES([]byte(aesKey), []byte(nonce))
+	fmt.Println(crypto)
+	citizenDecrypted, err := crypto.Decrypt(cypher)
+	if err != nil {
+		return citizenDecrypted, err
+	}
+	return citizenDecrypted, nil
+}
+
+//data for test
+// payment call back (NEXT)
+//{"TransactionRefID":"555test2022","Status":"success","PaymentInfoAmount":1900,"PaymentInfoWebAdditionalInfo":"testing","PartnerInfoName":"TIP","PartnerInfoDeeplinkUrl":"www.example.com","PaymentPlatform":"paotang"}
+
+// insurance call back
+//{"RefID":"555test2022f","IdCard":"12555995336","PlanCode":"PL01","PlanName":"ประกันโควิด","EffectiveDate":"2022-01-25T12:11:56Z","ExpireDate":"2022-01-25T12:11:56Z","IssueDate":"2022-01-25T12:11:56Z","InsuranceStatus":"success","TotalSumInsured":10000,"ProductOwner":"POtest","PlanType":"Base plan"}

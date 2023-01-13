@@ -78,10 +78,19 @@ func main() {
 	}
 	defer consumerGroupClient.Close()
 
+	//consumer 2
+	consumerGroupClient2, err := scramkafka.NewConsumerClient(viper.GetBool("kafka.auth"))
+	if err != nil {
+		log.Fatalf("cannot new sarama consumer client:%s", err)
+	}
+	defer consumerGroupClient2.Close()
+	//consumer 2
+
 	db := initDatabase()
 	reconcileRepository := repositories.NewReconcileRepositoryDB(db)
 
-	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.New(reconcileRepository))
+	consumerHandler := consumer.NewConsumer(&wg, pool, consumer.NewServicePayment(reconcileRepository))
+	consumer2Handler := consumer.NewConsumer2(&wg, pool, consumer.NewServiceInsurance(reconcileRepository))
 	reconcileJobHandler := notification.NewReconcileJob(reconcileRepository)
 
 	e.GET("/health", func(c echo.Context) error {
@@ -91,12 +100,12 @@ func main() {
 		})
 	})
 
-	wg.Add(1)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		for {
-			if err := consumerGroupClient.Consume(ctx, viper.GetStringSlice("kafka.topic.consumeTopic"), consumerHandler); err != nil {
-				log.Printf("Consume error[%s]: %v", viper.GetStringSlice("kafka.topic.consumeTopic"), err)
+			if err := consumerGroupClient.Consume(ctx, viper.GetStringSlice("kafka.topic.consumeTopic.Next"), consumerHandler); err != nil {
+				log.Printf("Consume error[%s]: %v", viper.GetStringSlice("kafka.topic.consumeTopic.Next"), err)
 			}
 			if ctx.Err() != nil {
 				log.Printf("Context Error %v", ctx.Err())
@@ -108,8 +117,32 @@ func main() {
 	}()
 	<-consumerHandler.Ready
 	log.Println("Consumer Up and Running!")
+	//consumer 2
+	go func() {
+		defer wg.Done()
+		for {
+			if err := consumerGroupClient2.Consume(ctx, viper.GetStringSlice("kafka.topic.consumeTopic.insourer"), consumer2Handler); err != nil {
+				log.Printf("Consume error[%s]: %v", viper.GetStringSlice("kafka.topic.consumeTopic.insourer"), err)
+			}
+			if ctx.Err() != nil {
+				log.Printf("Context Error %v", ctx.Err())
+				return
+			}
+
+			consumer2Handler.Ready = make(chan struct{})
+		}
+	}()
+	<-consumer2Handler.Ready
+	log.Println("Consumer2 Up and Running!")
+	// consumer 2
 	go func() {
 		if err := reconcileJobHandler.CheckReconcileStatus(); err != nil {
+			log.Println(err)
+			//return
+		}
+	}()
+	go func() {
+		if err := reconcileJobHandler.CheckAlertStatus(); err != nil {
 			log.Println(err)
 			//return
 		}
