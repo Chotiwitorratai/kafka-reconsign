@@ -132,7 +132,7 @@ func TestPaymentCallbackProcess(t *testing.T) {
 				reconcileRepository.On("SaveReconcile", reconcileData).Return(nil)
 			}
 
-			consumerService := consumer.New(reconcileRepository)
+			consumerService := consumer.NewServicePayment(reconcileRepository)
 
 			payment := repositories.Reconcile{
 				TransactionRefID:             c.transactionRefID,
@@ -308,7 +308,7 @@ func TestInsuranceCallbackProcess(t *testing.T) {
 				reconcileRepository.On("SaveReconcile", insuranceData).Return(nil)
 			}
 
-			consumerService := consumer.New(reconcileRepository)
+			consumerService := consumer.NewServiceInsurance(reconcileRepository)
 
 			insurance := insurance{
 				RefID:           c.refID,

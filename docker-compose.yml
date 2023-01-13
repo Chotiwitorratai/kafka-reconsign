@@ -19,3 +19,21 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+  # zookeeper2:
+  #   image: 'bitnami/zookeeper:latest'
+  #   ports:
+  #     - '2182:2181'
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  # kafka2:
+  #   image: 'bitnami/kafka:latest'
+  #   ports:
+  #     - '9090:9090'
+  #   environment:
+  #     - KAFKA_BROKER_ID=2
+  #     - KAFKA_CFG_LISTENERS=PLAINTEXT://:9090
+  #     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9090
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper2:2182
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #   depends_on:
+  #     - zookeeper2

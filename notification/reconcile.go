@@ -1,22 +1,27 @@
 package notification
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"kafka-reconsign/repositories"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
-	"kafka-reconsign/repositories"
+	"github.com/spf13/viper"
 )
 
 const (
 	lineNotifyAPI = "https://notify-api.line.me/api/notify"
 	lineToken     = "HD5RBYffvJAao8Qxm3mX7Zg1CpSQrEGfdVWlumFipuY"
 )
+
+var reconcileTime time.Duration
+var notificationTime time.Duration
+var startHour int
+var endHour int
 
 type ReconcileJob interface {
 	CheckReconcileStatus() error
@@ -28,43 +33,71 @@ type reconcileJob struct {
 }
 
 func NewReconcileJob(reconcileRepo repositories.ReconcileRepositoryDB) ReconcileJob {
+	initConfig()
 	return reconcileJob{reconcileRepo: reconcileRepo}
 }
 
 func (n reconcileJob) CheckReconcileStatus() error {
 	for {
+		newID := false
+		data := []repositories.Alert{}
+		alertID := []string{}
+
 		reconcile, err := getReconcileFailures(n)
 		if err != nil {
 			log.Println("get reconcile error", err)
 			return err
 		}
+		alert, err := getAlertFailures(n)
+		if err != nil {
+			return err
+		}
 
 		for _, rec := range reconcile {
-			foundID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
+			alertID = append(alertID, rec.TransactionRefID)
+			existRefID, err := n.reconcileRepo.GetAlertFailByID(rec.TransactionRefID)
 			if err != nil {
 				return err
 			}
-			if !foundID {
-				if rec.NextStatus == "Success" && rec.InsuranceStatus == "Success" {
-					_, err = updateAlertStatus(n, rec.TransactionRefID, rec.NextStatus, 0)
-					if err != nil {
-						return err
-					}
+			if !existRefID {
+				newID = true
+				missing := ""
+				if rec.NextStatus == "Success" {
+					missing = "insuranceCallback"
 				} else {
-					var missing string
-					if rec.NextStatus == "Success" {
-						missing = "paymentCallback"
-					} else {
-						missing = "insuranceCallback"
-					}
-					err = SaveAlert(n, rec.TransactionRefID, missing)
-					if err != nil {
-						return err
-					}
+					missing = "paymentNext"
 				}
+
+				data = append(data, repositories.Alert{
+					Messages:    "test",
+					Count:       0,
+					Status:      "Fail",
+					NextAlert:   time.Now().Add(5 * time.Minute),
+					RefId:       rec.TransactionRefID,
+					Missing:     missing,
+					Insurer:     rec.PartnerInfoName,
+					PaymentTime: rec.TransactionCreatedTimestamp,
+				})
 			}
 		}
-		time.Sleep(60 * time.Second)
+		if newID {
+			err = n.reconcileRepo.SaveAlert(data)
+			if err != nil {
+				fmt.Println(data)
+				return errors.New("save alert error")
+			}
+		}
+
+		for _, alrt := range alert {
+			if !contains(alertID, alrt.RefId) {
+				_, err = updateAlertStatus(n, alrt.RefId, "success", 0)
+				if err != nil {
+					return err
+				}
+			}
+
+		}
+		time.Sleep(reconcileTime * time.Second)
 	}
 }
 
@@ -74,25 +107,60 @@ func (n reconcileJob) CheckAlertStatus() error {
 		if err != nil {
 			return err
 		}
+		failcount, err := n.reconcileRepo.GetCountAlertFail()
+		if err != nil {
+			return err
+		}
+
 		if len(alert) > 0 {
-			s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", len(alert))
-			for _, rec := range alert {
-				str, err := updateAlertStatus(n, rec.RefId, "Fail", rec.Count+1)
+			s := fmt.Sprintf("Alert payment not reconcile (%v tnx)", failcount)
+			for i, a := range alert {
+				str, err := updateAlertStatus(n, a.RefId, "Fail", a.Count+1)
 				if err != nil {
 					return err
 				}
-				t := rec.CreatedAt.Format("2006-01-02 15:04:05")
-				str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, rec.Missing)
-				s += str
+				if i <= 2 {
+					t := a.PaymentTime.Format("2006-01-02 15:04:05")
+					str += fmt.Sprintf("\npayment time : %v\nmissing : %v", t, a.Missing)
+					s += str
+				}
 			}
-			err = sendLineNotification(s)
-			if err != nil {
-				log.Println("fail to notify :", err)
-				return err
+			if workingHour() {
+				log.Println("start notification")
+				err = sendLineNotification(s)
+				if err != nil {
+					log.Println("fail to notify :", err)
+					return err
+				}
 			}
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(notificationTime * time.Second)
 	}
+}
+
+func initConfig() {
+	reconcileTime = viper.GetDuration("checkReconcileInterval")
+	notificationTime = viper.GetDuration("notificationInterval")
+	startHour = viper.GetInt("schedule.startHour")
+	endHour = viper.GetInt("schedule.endHour")
+}
+
+func workingHour() bool {
+	now := time.Now()
+	currentHour := now.Hour()
+	if currentHour >= startHour && currentHour < endHour {
+		return true
+	}
+	return false
+}
+
+func contains(s []string, valueToCheck string) bool {
+	for _, v := range s {
+		if v == valueToCheck {
+			return true
+		}
+	}
+	return false
 }
 
 func getReconcileFailures(n reconcileJob) ([]repositories.Reconcile, error) {
@@ -133,58 +201,28 @@ func updateAlertStatus(n reconcileJob, id string, status string, count int) (str
 	return str, nil
 }
 
-func SaveAlert(n reconcileJob, id string, missing string) error {
-	data := []repositories.Alert{
-		{
-			Messages:  "test",
-			Count:     0,
-			Status:    "Fail",
-			NextAlert: time.Now().Add(5 * time.Minute),
-			RefId:     id,
-			Missing:   missing,
-		},
-	}
-	err := n.reconcileRepo.SaveAlert(data)
-	if err != nil {
-		return errors.New("save alert error")
-	}
-	return nil
-}
-
 func sendLineNotification(message string) error {
-	// Create a new HTTP client
-	client := &http.Client{}
-
-	// Create a new POST request
-	req, err := http.NewRequest("POST", lineNotifyAPI, nil)
+	req, err := http.NewRequest("POST", lineNotifyAPI, bytes.NewBuffer([]byte("message="+message)))
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
-	// Set the authorization header
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+lineToken)
 
-	// Create a new URL-encoded form
-	form := url.Values{}
-	form.Add("message", message)
-
-	// Set the body of the request to the form
-	req.Body = ioutil.NopCloser(strings.NewReader(form.Encode()))
-
-	// Set the content type header
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Send the request
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer res.Body.Close()
 
-	// Check the response status code
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("Failed to send notification: %s", res.Status)
+	_, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
-
 	return nil
 }
